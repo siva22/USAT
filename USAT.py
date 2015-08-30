@@ -142,14 +142,6 @@ def mysentence_score(sentence):
 	return (sentence_score(sentence, None, 0.0))	
 #pass URL of comments... as of now 'review-text-full' hard coded  
 def GetReviewComments(hostURL,reviewText):
-	'''
-	reviews = []
-	reviews.append("camera awesome.")
-	reviews.append("battery superb.")
-	reviews.append("camera expensive.")
-	reviews.append("battery dissapointed.")
-	'''
-	
 	page = requests.get(hostURL)
 	tree = html.fromstring(page.text)
 	reviews = tree.xpath('//span[@class="review-text-full"]/text()')
@@ -163,52 +155,57 @@ if __name__ == "__main__":
 	postagger = POSTagger()
 	dicttagger = DictionaryTagger([ 'D:/Code/Python/USAT/positive.yml', 'D:/Code/Python/USAT/negative.yml', 'D:/Code/Python/USAT/inc.yml', 'D:/Code/Python/USAT/dec.yml', 'D:/Code/Python/USAT/inv.yml'])
 
-	reviews = GetReviewComments("http://www.flipkart.com/redmi-2-prime/p/itme9t7hgvuepqm7?pid=MOBE9T7GTHERTDAC&ref=L%3A5997859224050682229&srno=p_5&query=redmi2&otracker=from-search","review-text-full")
-
+	modules = ["battery~charger~charging", "ram", "screen~display", "wifi", "camera", "ui", "speaker~music~audio", "os~ios~android"]
 	
+	if(len(sys.argv) > 1):
+		url = str(sys.argv[1])
+		print url
+	else:
+		url = "http://www.flipkart.com/redmi-2-prime/p/itme9t7hgvuepqm7?pid=MOBE9T7GTHERTDAC&ref=L%3A5997859224050682229&srno=p_5&query=redmi2&otracker=from-search"
+
+		
+	reviews = GetReviewComments(url,"review-text-full")
+	
+	ind = 0
+	mod_arr = []
+	while (ind < len(modules)):
+		mod_arr.append(modules[ind])
+		ind = ind + 1
+		
 	#index 0 for +ve,index 1 for -ve,and index 2 for neutral
 	semtimentArray = [[0 for y in xrange(3)] for x in xrange(10)]
 	for i in xrange(len(reviews)):
 		if i>=0:
-			text = reviews[i]
-			print text
+			text = reviews[i].lower()
+#			print text
 			splitted_sentences = splitter.split(text)
 
 			pos_tagged_sentences = postagger.pos_tag(splitted_sentences)
 
 			dict_tagged_sentences = dicttagger.tag(pos_tagged_sentences)
 
-		for idx in xrange(len(sys.argv)):
-			if idx == 0:continue;
+		idx = 0
+		for idx in xrange(len(mod_arr)):
 			for sentence in dict_tagged_sentences:
-				if  str(sentence).find(sys.argv[idx]) >=0:
-					score = mysentence_score(sentence)
-					if score>0:
-#                       print(" +Ve Module",sys.argv[idx],"sentence",sentence,"score",score,"\r\n")
-						semtimentArray[idx-1][0] = semtimentArray[idx-1][0] + 1 #score
-					elif score<0:
- #                      print(" -Ve Module",sys.argv[idx],"sentence",sentence,"score",score,"\r\n")
-						semtimentArray[idx-1][1] = semtimentArray[idx-1][1] + 1 #math.copysign(score,+0.0)
-					else:
- #                      print(" === Module",sys.argv[idx],"sentence",sentence,"score",score,"\r\n")
-						semtimentArray[idx-1][2] = semtimentArray[idx-1][2] + 1 #score
+				
+				splitStrs = mod_arr[idx].split("~")
 
-	
-	semtimentArray[0][0] = 4
-	semtimentArray[0][1] = 5
-	semtimentArray[0][2] = 2
-	semtimentArray[1][0] = 0
-	semtimentArray[1][1] = 4
-	semtimentArray[1][2] = 2
-	semtimentArray[2][0] = 0
-	semtimentArray[2][1] = 0
-	semtimentArray[2][2] = 4
+				for splitStr in splitStrs:
+					if  str(sentence).find(splitStr) >=0:
+						score = mysentence_score(sentence)
+						if score>0:
+							semtimentArray[idx][0] = semtimentArray[idx][0] + 1 #score
+						elif score<0:
+							semtimentArray[idx][1] = semtimentArray[idx][1] + 1 #math.copysign(score,+0.0)
+						else:
+							semtimentArray[idx][2] = semtimentArray[idx][2] + 1 #score
+						break
 	
 	num_of_module = 0
 	i = 0
-	for i in xrange(len(sys.argv) - 1 ):
+	for i in xrange(len(mod_arr)):
 		num_of_module = num_of_module + 1
-		print str(sys.argv[i+1])
+		print str(mod_arr[i])
 		iTotal = 0
 		j = 0
 		for j in range(len(semtimentArray[i])):
@@ -237,7 +234,9 @@ if __name__ == "__main__":
 
 	j = 0
 	while (j < num_of_module):
-		y_data.append(str(sys.argv[j+1]))
+		temp = str(mod_arr[j])
+		temp2 = temp.split("~")
+		y_data.append(temp2[0])
 		j = j + 1
 
 	j = 0
